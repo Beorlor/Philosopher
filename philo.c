@@ -32,7 +32,7 @@ void *monitor_routine(void *arg)
             params->stop = 1;
             return (NULL);
         }
-        usleep(100); // Pour éviter de trop fréquentes vérifications
+        usleep(1000); // Pour éviter de trop fréquentes vérifications
     }
     return (NULL);
 }
@@ -61,12 +61,9 @@ void initialize_philosophers(t_params *params)
 {
     params->philosophers = malloc(params->number_of_philosophers * sizeof(t_philosopher));
     params->forks = malloc(params->number_of_philosophers * sizeof(pthread_mutex_t));
-    params->philosopher_mutexes = malloc(params->number_of_philosophers * sizeof(pthread_mutex_t));
 
-    for (int i = 0; i < params->number_of_philosophers; i++) {
+    for (int i = 0; i < params->number_of_philosophers; i++)
         pthread_mutex_init(&params->forks[i], NULL);
-        pthread_mutex_init(&params->philosopher_mutexes[i], NULL);
-    }
 
     pthread_mutex_init(&params->print_mutex, NULL);
     pthread_mutex_init(&params->death_mutex, NULL);
@@ -85,15 +82,12 @@ void initialize_philosophers(t_params *params)
 
 void cleanup(t_params *params)
 {
-    for (int i = 0; i < params->number_of_philosophers; i++) {
+    for (int i = 0; i < params->number_of_philosophers; i++)
         pthread_mutex_destroy(&params->forks[i]);
-        pthread_mutex_destroy(&params->philosopher_mutexes[i]);
-    }
     pthread_mutex_destroy(&params->print_mutex);
     pthread_mutex_destroy(&params->death_mutex);
     free(params->forks);
     free(params->philosophers);
-    free(params->philosopher_mutexes);
 }
 
 int parse_arguments(int argc, char **argv, t_params *params)

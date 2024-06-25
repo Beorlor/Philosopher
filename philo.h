@@ -27,7 +27,6 @@ typedef struct s_params
     int number_of_times_each_philosopher_must_eat;
     int stop;
     pthread_mutex_t *forks;
-    pthread_mutex_t *philosopher_mutexes;
     pthread_mutex_t print_mutex;
     pthread_mutex_t death_mutex;
     t_philosopher *philosophers;
