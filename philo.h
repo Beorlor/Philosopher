@@ -7,8 +7,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-typedef struct s_philosopher
-{
+typedef struct s_philosopher {
     int id;
     pthread_t thread;
     pthread_mutex_t *left_fork;
@@ -18,8 +17,7 @@ typedef struct s_philosopher
     struct s_params *params;
 } t_philosopher;
 
-typedef struct s_params
-{
+typedef struct s_params {
     int number_of_philosophers;
     int time_to_die;
     int time_to_eat;
@@ -39,5 +37,6 @@ void initialize_philosophers(t_params *params);
 void cleanup(t_params *params);
 int parse_arguments(int argc, char **argv, t_params *params);
 void *monitor_routine(void *arg);
+void ft_usleep(int milliseconds);
 
 #endif
