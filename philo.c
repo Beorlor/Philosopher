@@ -24,6 +24,7 @@ typedef struct s_params {
     pthread_mutex_t *forks;
     pthread_mutex_t print_mutex;
     pthread_mutex_t death_mutex;
+    pthread_mutex_t meals_mutex;
     t_philosopher *philosophers;
 } t_params;
 
@@ -69,9 +70,9 @@ void *philosopher_routine(void *arg) {
 
         ft_usleep(philo->params->time_to_eat);
 
-        pthread_mutex_lock(&philo->params->death_mutex);
+        pthread_mutex_lock(&philo->params->meals_mutex);
         philo->meals_eaten++;
-        pthread_mutex_unlock(&philo->params->death_mutex);
+        pthread_mutex_unlock(&philo->params->meals_mutex);
 
         pthread_mutex_unlock(second_fork);
         pthread_mutex_unlock(first_fork);
@@ -104,6 +105,7 @@ void initialize_philosophers(t_params *params) {
     }
     pthread_mutex_init(&params->print_mutex, NULL);
     pthread_mutex_init(&params->death_mutex, NULL);
+    pthread_mutex_init(&params->meals_mutex, NULL);
 
     params->philosophers = malloc(params->number_of_philosophers * sizeof(t_philosopher));
     for (int i = 0; i < params->number_of_philosophers; i++) {
@@ -123,6 +125,7 @@ void cleanup(t_params *params) {
     }
     pthread_mutex_destroy(&params->print_mutex);
     pthread_mutex_destroy(&params->death_mutex);
+    pthread_mutex_destroy(&params->meals_mutex);
     free(params->forks);
     free(params->philosophers);
 }
@@ -130,6 +133,7 @@ void cleanup(t_params *params) {
 void *monitor_routine(void *arg) {
     t_params *params = (t_params *)arg;
     while (!params->stop) {
+        int all_philosophers_done = 1;
         for (int i = 0; i < params->number_of_philosophers; i++) {
             pthread_mutex_lock(&params->death_mutex);
             if ((get_timestamp() - params->philosophers[i].last_meal_time) > params->time_to_die) {
@@ -137,8 +141,25 @@ void *monitor_routine(void *arg) {
                 params->stop = 1;
             }
             pthread_mutex_unlock(&params->death_mutex);
+
+            if (params->number_of_times_each_philosopher_must_eat > 0) {
+                pthread_mutex_lock(&params->meals_mutex);
+                if (params->philosophers[i].meals_eaten < params->number_of_times_each_philosopher_must_eat) {
+                    all_philosophers_done = 0;
+                }
+                pthread_mutex_unlock(&params->meals_mutex);
+            } else {
+                all_philosophers_done = 0;
+            }
+
             if (params->stop)
                 break;
+        }
+        if (params->number_of_times_each_philosopher_must_eat > 0 && all_philosophers_done) {
+            pthread_mutex_lock(&params->print_mutex);
+            printf("All philosophers have eaten at least %d times.\n", params->number_of_times_each_philosopher_must_eat);
+            params->stop = 1;
+            pthread_mutex_unlock(&params->print_mutex);
         }
         usleep(1000);  // Check roughly every 1ms
     }
