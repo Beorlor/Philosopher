@@ -7,6 +7,13 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#define COLOR_RESET    "\x1b[0m"
+#define COLOR_THINKING "\x1b[34m"
+#define COLOR_FORK     "\x1b[33m"
+#define COLOR_EATING   "\x1b[32m"
+#define COLOR_SLEEPING "\x1b[36m"
+#define COLOR_DEAD     "\x1b[31m"
+
 typedef struct s_philosopher {
     int id;
     pthread_t thread;
@@ -23,20 +30,12 @@ typedef struct s_params {
     int time_to_eat;
     int time_to_sleep;
     int number_of_times_each_philosopher_must_eat;
-    int stop;
+    volatile int stop;
     pthread_mutex_t *forks;
     pthread_mutex_t print_mutex;
     pthread_mutex_t death_mutex;
+    pthread_mutex_t meals_mutex;
     t_philosopher *philosophers;
 } t_params;
-
-long get_timestamp();
-void print_status(t_philosopher *philo, const char *status);
-void *philosopher_routine(void *arg);
-void initialize_philosophers(t_params *params);
-void cleanup(t_params *params);
-int parse_arguments(int argc, char **argv, t_params *params);
-void *monitor_routine(void *arg);
-void ft_usleep(int milliseconds);
 
 #endif
