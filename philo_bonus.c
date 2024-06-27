@@ -27,7 +27,7 @@ typedef struct s_params {
     sem_t *forks;
     sem_t *print_sem;
     sem_t *death_sem;
-    sem_t *philosopher_sem;
+    sem_t *pair_of_forks_sem;
     int stop;
     t_philosopher *philosophers;
 } t_params;
@@ -58,7 +58,7 @@ void philosopher_routine(t_philosopher *philo) {
         print_status(philo, "is thinking");
 
         // Ensure only number_of_philosophers - 1 philosophers can attempt to pick up forks at once
-        sem_wait(philo->params->philosopher_sem);
+        sem_wait(philo->params->pair_of_forks_sem);
 
         // Pick up forks
         sem_wait(philo->params->forks);
@@ -81,7 +81,7 @@ void philosopher_routine(t_philosopher *philo) {
         sem_post(philo->params->forks);
 
         // Allow another philosopher to try to pick up forks
-        sem_post(philo->params->philosopher_sem);
+        sem_post(philo->params->pair_of_forks_sem);
 
         // Sleeping
         print_status(philo, "is sleeping");
@@ -91,7 +91,7 @@ void philosopher_routine(t_philosopher *philo) {
     sem_close(philo->params->forks);
     sem_close(philo->params->print_sem);
     sem_close(philo->params->death_sem);
-    sem_close(philo->params->philosopher_sem);
+    sem_close(philo->params->pair_of_forks_sem);
     exit(0); // Ensure the process exits properly
 }
 
@@ -99,23 +99,23 @@ void initialize_semaphores(t_params *params) {
     sem_unlink("/forks");
     sem_unlink("/print_sem");
     sem_unlink("/death_sem");
-    sem_unlink("/philosopher_sem");
+    sem_unlink("/pair_of_forks_sem");
 
     params->forks = sem_open("/forks", O_CREAT, 0644, params->number_of_philosophers);
     params->print_sem = sem_open("/print_sem", O_CREAT, 0644, 1);
     params->death_sem = sem_open("/death_sem", O_CREAT, 0644, 1);
-    params->philosopher_sem = sem_open("/philosopher_sem", O_CREAT, 0644, params->number_of_philosophers - 1);
+    params->pair_of_forks_sem = sem_open("/pair_of_forks_sem", O_CREAT, 0644, params->number_of_philosophers - 1);
 }
 
 void cleanup_semaphores(t_params *params) {
     sem_close(params->forks);
     sem_close(params->print_sem);
     sem_close(params->death_sem);
-    sem_close(params->philosopher_sem);
+    sem_close(params->pair_of_forks_sem);
     sem_unlink("/forks");
     sem_unlink("/print_sem");
     sem_unlink("/death_sem");
-    sem_unlink("/philosopher_sem");
+    sem_unlink("/pair_of_forks_sem");
 }
 
 void create_philosophers(t_params *params) {
