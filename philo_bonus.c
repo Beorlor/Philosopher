@@ -95,16 +95,45 @@ void philosopher_routine(t_philosopher *philo) {
     exit(0); // Ensure the process exits properly
 }
 
-void initialize_semaphores(t_params *params) {
+int initialize_semaphores(t_params *params) {
     sem_unlink("/forks");
     sem_unlink("/print_sem");
     sem_unlink("/death_sem");
     sem_unlink("/pair_of_forks_sem");
 
     params->forks = sem_open("/forks", O_CREAT, 0644, params->number_of_philosophers);
+    if (params->forks == SEM_FAILED) {
+        perror("Failed to initialize forks semaphore");
+        return 0;
+    }
     params->print_sem = sem_open("/print_sem", O_CREAT, 0644, 1);
+    if (params->print_sem == SEM_FAILED) {
+        perror("Failed to initialize print semaphore");
+        sem_close(params->forks);
+        sem_unlink("/forks");
+        return 0;
+    }
     params->death_sem = sem_open("/death_sem", O_CREAT, 0644, 1);
+    if (params->death_sem == SEM_FAILED) {
+        perror("Failed to initialize death semaphore");
+        sem_close(params->forks);
+        sem_close(params->print_sem);
+        sem_unlink("/forks");
+        sem_unlink("/print_sem");
+        return 0;
+    }
     params->pair_of_forks_sem = sem_open("/pair_of_forks_sem", O_CREAT, 0644, params->number_of_philosophers - 1);
+    if (params->pair_of_forks_sem == SEM_FAILED) {
+        perror("Failed to initialize pair_of_forks semaphore");
+        sem_close(params->forks);
+        sem_close(params->print_sem);
+        sem_close(params->death_sem);
+        sem_unlink("/forks");
+        sem_unlink("/print_sem");
+        sem_unlink("/death_sem");
+        return 0;
+    }
+    return 1;
 }
 
 void cleanup_semaphores(t_params *params) {
@@ -118,8 +147,12 @@ void cleanup_semaphores(t_params *params) {
     sem_unlink("/pair_of_forks_sem");
 }
 
-void create_philosophers(t_params *params) {
+int create_philosophers(t_params *params) {
     params->philosophers = mmap(NULL, params->number_of_philosophers * sizeof(t_philosopher), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if (params->philosophers == MAP_FAILED) {
+        perror("Failed to allocate shared memory for philosophers");
+        return 0;
+    }
 
     for (int i = 0; i < params->number_of_philosophers; i++) {
         params->philosophers[i].id = i + 1;
@@ -130,10 +163,14 @@ void create_philosophers(t_params *params) {
         if (pid == 0) {
             philosopher_routine(&params->philosophers[i]);
             exit(0);
+        } else if (pid < 0) {
+            perror("Failed to fork philosopher process");
+            return 0;
         } else {
             params->philosophers[i].pid = pid;
         }
     }
+    return 1;
 }
 
 int parse_arguments(int argc, char **argv, t_params *params) {
@@ -194,8 +231,14 @@ int main(int argc, char **argv) {
     if (!parse_arguments(argc, argv, &params))
         return (1);
 
-    initialize_semaphores(&params);
-    create_philosophers(&params);
+    if (!initialize_semaphores(&params)) {
+        return (1);
+    }
+
+    if (!create_philosophers(&params)) {
+        cleanup_semaphores(&params);
+        return (1);
+    }
 
     monitor_routine(&params);
 
