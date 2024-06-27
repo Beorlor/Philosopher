@@ -1,22 +1,39 @@
-NAME = philo
-
+# Compiler
 CC = gcc
+
+# Compiler flags
 CFLAGS = -Wall -Wextra -Werror
 
-SRCS = philo.c
-OBJS = $(SRCS:.c=.o)
+# Directories
+INCDIR = philosopher/include
+SRCDIR = philosopher/src
+OBJDIR = obj
 
-all: $(NAME)
+# Sources and objects
+SRCS = $(wildcard $(SRCDIR)/*.c)
+OBJS = $(SRCS:$(SRCDIR)/%.c=$(OBJDIR)/%.o)
 
-$(NAME): $(OBJS)
-	$(CC) $(CFLAGS) -o $(NAME) $(OBJS)
+# Target executable
+TARGET = philo
 
+# Default target
+all: $(TARGET)
+
+# Rule to link object files to create the executable
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) -I$(INCDIR) -o $@ $^
+
+# Rule to compile source files into object files
+$(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)
+	$(CC) $(CFLAGS) -I$(INCDIR) -c $< -o $@
+
+# Create object directory if it doesn't exist
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
+
+# Clean target to remove compiled files
 clean:
-	rm -f $(OBJS)
+	rm -rf $(OBJDIR) $(TARGET)
 
-fclean: clean
-	rm -f $(NAME)
-
-re: fclean all
-
-.PHONY: all clean fclean re
+# Phony targets
+.PHONY: all clean

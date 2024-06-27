@@ -38,4 +38,17 @@ typedef struct s_params {
     t_philosopher *philosophers;
 } t_params;
 
+void handle_error(const char *msg);
+void *check_malloc(size_t size);
+void check_pthread_create(int ret);
+void check_pthread_mutex_init(int ret);
+void *philosopher_routine(void *arg);
+int parse_arguments(int argc, char **argv, t_params *params);
+void initialize_philosophers(t_params *params);
+void *monitor_routine(void *arg);
+long get_timestamp(void);
+void ft_usleep(int milliseconds);
+void print_status(t_philosopher *philo, const char *status, const char *color);
+void cleanup(t_params *params);
+
 #endif
