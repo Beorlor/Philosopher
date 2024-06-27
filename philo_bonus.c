@@ -8,6 +8,15 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <signal.h>
+#include <sys/mman.h>
+
+typedef struct s_philosopher {
+    int id;
+    long last_meal_time;
+    int meals_eaten;
+    pid_t pid;
+    struct s_params *params;
+} t_philosopher;
 
 typedef struct s_params {
     int number_of_philosophers;
@@ -20,15 +29,8 @@ typedef struct s_params {
     sem_t *death_sem;
     sem_t *philosopher_sem;
     int stop;
-    struct s_philosopher *philosophers;
+    t_philosopher *philosophers;
 } t_params;
-
-typedef struct s_philosopher {
-    int id;
-    long last_meal_time;
-    int meals_eaten;
-    t_params *params;
-} t_philosopher;
 
 long get_timestamp() {
     struct timeval tv;
@@ -90,6 +92,7 @@ void philosopher_routine(t_philosopher *philo) {
     sem_close(philo->params->print_sem);
     sem_close(philo->params->death_sem);
     sem_close(philo->params->philosopher_sem);
+    exit(0); // Ensure the process exits properly
 }
 
 void initialize_semaphores(t_params *params) {
@@ -116,17 +119,19 @@ void cleanup_semaphores(t_params *params) {
 }
 
 void create_philosophers(t_params *params) {
-    params->philosophers = malloc(params->number_of_philosophers * sizeof(t_philosopher));
+    params->philosophers = mmap(NULL, params->number_of_philosophers * sizeof(t_philosopher), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+
     for (int i = 0; i < params->number_of_philosophers; i++) {
+        params->philosophers[i].id = i + 1;
+        params->philosophers[i].last_meal_time = get_timestamp();
+        params->philosophers[i].meals_eaten = 0;
+        params->philosophers[i].params = params;
         pid_t pid = fork();
         if (pid == 0) {
-            t_philosopher *philo = &params->philosophers[i];
-            philo->id = i + 1;
-            philo->last_meal_time = get_timestamp();
-            philo->meals_eaten = 0;
-            philo->params = params;
-            philosopher_routine(philo);
+            philosopher_routine(&params->philosophers[i]);
             exit(0);
+        } else {
+            params->philosophers[i].pid = pid;
         }
     }
 }
@@ -148,18 +153,36 @@ int parse_arguments(int argc, char **argv, t_params *params) {
 
 void monitor_routine(t_params *params) {
     while (!params->stop) {
+        int all_done = 1;
         for (int i = 0; i < params->number_of_philosophers; i++) {
             sem_wait(params->death_sem);
             long time_since_last_meal = get_timestamp() - params->philosophers[i].last_meal_time;
             if (time_since_last_meal > params->time_to_die) {
                 print_status(&params->philosophers[i], "died");
                 params->stop = 1;
-                kill(0, SIGKILL); // Kill all philosopher processes
+                // Signal all child processes to terminate
+                for (int j = 0; j < params->number_of_philosophers; j++) {
+                    kill(params->philosophers[j].pid, SIGTERM);
+                }
             }
             sem_post(params->death_sem);
 
+            if (params->number_of_times_each_philosopher_must_eat > 0 && params->philosophers[i].meals_eaten < params->number_of_times_each_philosopher_must_eat) {
+                all_done = 0;
+            }
+
             if (params->stop)
                 break;
+        }
+        if (params->number_of_times_each_philosopher_must_eat > 0 && all_done && !params->stop) {
+            sem_wait(params->print_sem);
+            printf("All philosophers have eaten at least %d times.\n", params->number_of_times_each_philosopher_must_eat);
+            params->stop = 1;
+            sem_post(params->print_sem);
+            // Signal all child processes to terminate
+            for (int i = 0; i < params->number_of_philosophers; i++) {
+                kill(params->philosophers[i].pid, SIGTERM);
+            }
         }
         usleep(1000);
     }
@@ -177,10 +200,10 @@ int main(int argc, char **argv) {
     monitor_routine(&params);
 
     for (int i = 0; i < params.number_of_philosophers; i++) {
-        waitpid(-1, NULL, 0);
+        waitpid(params.philosophers[i].pid, NULL, 0);
     }
 
     cleanup_semaphores(&params);
-    free(params.philosophers);
+    munmap(params.philosophers, params.number_of_philosophers * sizeof(t_philosopher));
     return (0);
 }
