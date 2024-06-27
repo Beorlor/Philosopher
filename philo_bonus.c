@@ -28,7 +28,7 @@ typedef struct s_params {
     sem_t *print_sem;
     sem_t *death_sem;
     sem_t *pair_of_forks_sem;
-    int stop;
+    volatile int stop;
     t_philosopher *philosophers;
 } t_params;
 

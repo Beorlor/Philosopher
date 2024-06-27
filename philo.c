@@ -20,7 +20,7 @@ typedef struct s_params {
     int time_to_eat;
     int time_to_sleep;
     int number_of_times_each_philosopher_must_eat;
-    int stop;
+    volatile int stop;
     pthread_mutex_t *forks;
     pthread_mutex_t print_mutex;
     pthread_mutex_t death_mutex;
