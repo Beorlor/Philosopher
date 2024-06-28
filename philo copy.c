@@ -6,7 +6,7 @@
 /*   By: jedurand <jedurand@student.42perpignan.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/28 12:00:00 by assistant         #+#    #+#             */
-/*   Updated: 2024/06/28 23:04:16 by jedurand         ###   ########.fr       */
+/*   Updated: 2024/06/28 22:58:44 by jedurand         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -230,8 +230,6 @@ void	init_colors(t_philosopher *philosophers, int number_of_philosophers)
 void	*philosopher_routine(void *arg)
 {
 	t_philosopher	*philo;
-	pthread_mutex_t	*first_fork;
-	pthread_mutex_t	*second_fork;
 	int	should_stop;
 
 	philo = (t_philosopher *)arg;
@@ -239,21 +237,19 @@ void	*philosopher_routine(void *arg)
 	while (!should_stop)
 	{
 		print_status(philo, "is thinking");
-		first_fork = (philo->id % 2 == 0) ? philo->left_fork : philo->right_fork;
-		second_fork = (philo->id % 2 == 0) ? philo->right_fork : philo->left_fork;
-		pthread_mutex_lock(first_fork);
+		pthread_mutex_lock(philo->left_fork);
 		print_status(philo, "has taken a fork");
-		if (first_fork == second_fork)
+		if (philo->left_fork == philo->right_fork)
 		{
 			ft_usleep(philo->params->time_to_die);
 			print_status(philo, "died");
 			pthread_mutex_lock(&philo->params->stop_mutex);
 			should_stop = philo->params->stop = 1;
 			pthread_mutex_unlock(&philo->params->stop_mutex);
-			pthread_mutex_unlock(first_fork);
+			pthread_mutex_unlock(philo->left_fork);
 			break ;
 		}
-		pthread_mutex_lock(second_fork);
+		pthread_mutex_lock(philo->right_fork);
 		print_status(philo, "has taken a second fork");
 		pthread_mutex_lock(&philo->params->death_mutex);
 		philo->last_meal_time = get_timestamp();
@@ -263,8 +259,8 @@ void	*philosopher_routine(void *arg)
 		pthread_mutex_lock(&philo->params->meals_mutex);
 		philo->meals_eaten++;
 		pthread_mutex_unlock(&philo->params->meals_mutex);
-		pthread_mutex_unlock(second_fork);
-		pthread_mutex_unlock(first_fork);
+		pthread_mutex_unlock(philo->right_fork);
+		pthread_mutex_unlock(philo->left_fork);
 		print_status(philo, "is sleeping");
 		ft_usleep(philo->params->time_to_sleep);
 		pthread_mutex_lock(&philo->params->stop_mutex);
@@ -335,6 +331,8 @@ int	initialize_philosophers(t_params *params)
 		params->philosophers[i].left_fork = &params->forks[i];
 		params->philosophers[i].right_fork = &params->forks[(i + 1)
 			% params->number_of_philosophers];
+		params->philosophers[i].left_fork = (params->philosophers[i].id % 2 == 0) ? params->philosophers[i].left_fork : params->philosophers[i].right_fork;
+		params->philosophers[i].right_fork = (params->philosophers[i].id % 2 == 0) ? params->philosophers[i].right_fork : params->philosophers[i].left_fork;
 		params->philosophers[i].last_meal_time = get_timestamp();
 		params->philosophers[i].meals_eaten = 0;
 		params->philosophers[i].params = params;

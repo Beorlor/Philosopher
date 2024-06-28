@@ -6,6 +6,8 @@ ft usleep
 
 volatile
 
+initialize semaphore, refactor
+
 gestion derreur appel fonction
 
 couleur
@@ -18,11 +20,10 @@ norme
 
 
 
-normal : atoi / exit / perror
-int to str = itoa
+refaire free et le cleanup - leaks
 
 
-info
+info :
 
 data race
 
