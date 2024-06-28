@@ -8,12 +8,18 @@ volatile
 
 gestion derreur appel fonction
 
-couleur philo
+couleur
 
 fonction pas autoriser
 
 norme
 
+
+
+
+
+normal : atoi / exit / perror
+int to str = itoa
 
 
 info
