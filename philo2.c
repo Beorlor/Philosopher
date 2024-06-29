@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   philo.c                                            :+:      :+:    :+:   */
+/*   philo copy.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: jedurand <jedurand@student.42perpignan.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/28 12:00:00 by assistant         #+#    #+#             */
-/*   Updated: 2024/06/28 22:58:44 by jedurand         ###   ########.fr       */
+/*   Updated: 2024/06/29 06:12:59 by jedurand         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -328,11 +328,16 @@ int	initialize_philosophers(t_params *params)
 	while (i < params->number_of_philosophers)
 	{
 		params->philosophers[i].id = i + 1;
-		params->philosophers[i].left_fork = &params->forks[i];
-		params->philosophers[i].right_fork = &params->forks[(i + 1)
-			% params->number_of_philosophers];
-		params->philosophers[i].left_fork = (params->philosophers[i].id % 2 == 0) ? params->philosophers[i].left_fork : params->philosophers[i].right_fork;
-		params->philosophers[i].right_fork = (params->philosophers[i].id % 2 == 0) ? params->philosophers[i].right_fork : params->philosophers[i].left_fork;
+		if (params->philosophers[i].id % 2 == 0)
+		{
+			params->philosophers[i].left_fork = &params->forks[i];
+			params->philosophers[i].right_fork = &params->forks[(i + 1) % params->number_of_philosophers];
+		}
+		else
+		{
+			params->philosophers[i].left_fork = &params->forks[(i + 1) % params->number_of_philosophers];
+			params->philosophers[i].right_fork = &params->forks[i];
+		}
 		params->philosophers[i].last_meal_time = get_timestamp();
 		params->philosophers[i].meals_eaten = 0;
 		params->philosophers[i].params = params;
