@@ -6,30 +6,20 @@
 /*   By: jedurand <jedurand@student.42perpignan.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/28 12:00:00 by assistant         #+#    #+#             */
-/*   Updated: 2024/06/28 23:04:16 by jedurand         ###   ########.fr       */
+/*   Updated: 2024/06/30 03:30:44 by jedurand         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include <pthread.h>
-#include <sys/time.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #define COLOR_RESET "\x1b[0m"
 #define MIN_BRIGHTNESS 120
 #define MAX_BRIGHTNESS 255
 #define BASE_COLORS_COUNT 6
-#define RED_INDEX 0
-#define GREEN_INDEX 1
-#define BLUE_INDEX 2
-
-#define RED_COLOR {255, 0, 0}
-#define GREEN_COLOR {0, 255, 0}
-#define BLUE_COLOR {0, 0, 255}
-#define YELLOW_COLOR {255, 255, 0}
-#define MAGENTA_COLOR {255, 0, 255}
-#define CYAN_COLOR {0, 255, 255}
 
 typedef struct s_philosopher
 {
@@ -41,7 +31,7 @@ typedef struct s_philosopher
 	int				meals_eaten;
 	struct s_params	*params;
 	char			color[20];
-}	t_philosopher;
+}					t_philosopher;
 
 typedef struct s_params
 {
@@ -57,7 +47,7 @@ typedef struct s_params
 	pthread_mutex_t	meals_mutex;
 	pthread_mutex_t	stop_mutex;
 	t_philosopher	*philosophers;
-}	t_params;
+}					t_params;
 
 int	ft_strlen(const char *s)
 {
@@ -162,9 +152,23 @@ void	adjust_brightness(int *red, int *green, int *blue, int brightness)
 		*green = (*green * brightness) / 255;
 	if (*blue)
 		*blue = (*blue * brightness) / 255;
-	*red = *red < MIN_BRIGHTNESS && *red ? *red + (MIN_BRIGHTNESS / 2) : *red;
-	*green = *green < MIN_BRIGHTNESS && *green ? *green + (MIN_BRIGHTNESS / 2) : *green;
-	*blue = *blue < MIN_BRIGHTNESS && *blue ? *blue + (MIN_BRIGHTNESS / 2) : *blue;
+	if (*red < MIN_BRIGHTNESS && *red)
+		*red += (MIN_BRIGHTNESS / 2);
+	if (*green < MIN_BRIGHTNESS && *green)
+		*green += (MIN_BRIGHTNESS / 2);
+	if (*blue < MIN_BRIGHTNESS && *blue)
+		*blue += (MIN_BRIGHTNESS / 2);
+}
+
+void	construct_ansi_prefix(char **color)
+{
+	*(*color)++ = '\x1b';
+	*(*color)++ = '[';
+	*(*color)++ = '3';
+	*(*color)++ = '8';
+	*(*color)++ = ';';
+	*(*color)++ = '2';
+	*(*color)++ = ';';
 }
 
 void	construct_color_sequence(int red, int green, int blue, char *color)
@@ -174,13 +178,7 @@ void	construct_color_sequence(int red, int green, int blue, char *color)
 	char	blue_str[4];
 	int		i;
 
-	*color++ = '\x1b';
-	*color++ = '[';
-	*color++ = '3';
-	*color++ = '8';
-	*color++ = ';';
-	*color++ = '2';
-	*color++ = ';';
+	construct_ansi_prefix(&color);
 	itoa_rgb(red, red_str);
 	itoa_rgb(green, green_str);
 	itoa_rgb(blue, blue_str);
@@ -199,26 +197,76 @@ void	construct_color_sequence(int red, int green, int blue, char *color)
 	*color = '\0';
 }
 
+void	init_red_color(int *color)
+{
+	color[0] = 255;
+	color[1] = 0;
+	color[2] = 0;
+}
+
+void	init_green_color(int *color)
+{
+	color[0] = 0;
+	color[1] = 255;
+	color[2] = 0;
+}
+
+void	init_blue_color(int *color)
+{
+	color[0] = 0;
+	color[1] = 0;
+	color[2] = 255;
+}
+
+void	init_yellow_color(int *color)
+{
+	color[0] = 255;
+	color[1] = 255;
+	color[2] = 0;
+}
+
+void	init_magenta_color(int *color)
+{
+	color[0] = 255;
+	color[1] = 0;
+	color[2] = 255;
+}
+
+void	init_cyan_color(int *color)
+{
+	color[0] = 0;
+	color[1] = 255;
+	color[2] = 255;
+}
+
+void	init_base_colors(int base_colors[BASE_COLORS_COUNT][3])
+{
+	init_red_color(base_colors[0]);
+	init_green_color(base_colors[1]);
+	init_blue_color(base_colors[2]);
+	init_yellow_color(base_colors[3]);
+	init_magenta_color(base_colors[4]);
+	init_cyan_color(base_colors[5]);
+}
+
 void	init_colors(t_philosopher *philosophers, int number_of_philosophers)
 {
-	const int	base_colors[BASE_COLORS_COUNT][3] = {
-		RED_COLOR, GREEN_COLOR, BLUE_COLOR, YELLOW_COLOR,
-		MAGENTA_COLOR, CYAN_COLOR
-	};
-	int			i;
-	int			base_index;
-	int			red;
-	int			green;
-	int			blue;
-	int			brightness;
+	int	base_colors[BASE_COLORS_COUNT][3];
+	int	base_index;
+	int	red;
+	int	green;
+	int	blue;
+	int	brightness;
+	int	i;
 
+	init_base_colors(base_colors);
 	i = 0;
 	while (i < number_of_philosophers)
 	{
 		base_index = (i * 5) % BASE_COLORS_COUNT;
-		red = base_colors[base_index][RED_INDEX];
-		green = base_colors[base_index][GREEN_INDEX];
-		blue = base_colors[base_index][BLUE_INDEX];
+		red = base_colors[base_index][0];
+		green = base_colors[base_index][1];
+		blue = base_colors[base_index][2];
 		brightness = MAX_BRIGHTNESS - ((i * (MAX_BRIGHTNESS - MIN_BRIGHTNESS))
 				/ (number_of_philosophers));
 		adjust_brightness(&red, &green, &blue, brightness);
@@ -227,44 +275,54 @@ void	init_colors(t_philosopher *philosophers, int number_of_philosophers)
 	}
 }
 
+void	take_forks(t_philosopher *philo)
+{
+	pthread_mutex_lock(philo->left_fork);
+	print_status(philo, "has taken a fork");
+	if (philo->left_fork == philo->right_fork)
+	{
+		ft_usleep(philo->params->time_to_die);
+		print_status(philo, "died");
+		pthread_mutex_lock(&philo->params->stop_mutex);
+		philo->params->stop = 1;
+		pthread_mutex_unlock(&philo->params->stop_mutex);
+		pthread_mutex_unlock(philo->left_fork);
+	}
+	else
+	{
+		pthread_mutex_lock(philo->right_fork);
+		print_status(philo, "has taken a second fork");
+	}
+}
+
+void	eat(t_philosopher *philo)
+{
+	pthread_mutex_lock(&philo->params->death_mutex);
+	philo->last_meal_time = get_timestamp();
+	print_status(philo, "is eating");
+	pthread_mutex_unlock(&philo->params->death_mutex);
+	ft_usleep(philo->params->time_to_eat);
+	pthread_mutex_lock(&philo->params->meals_mutex);
+	philo->meals_eaten++;
+	pthread_mutex_unlock(&philo->params->meals_mutex);
+	pthread_mutex_unlock(philo->right_fork);
+	pthread_mutex_unlock(philo->left_fork);
+}
+
 void	*philosopher_routine(void *arg)
 {
 	t_philosopher	*philo;
-	pthread_mutex_t	*first_fork;
-	pthread_mutex_t	*second_fork;
-	int	should_stop;
+	int				should_stop;
 
 	philo = (t_philosopher *)arg;
 	should_stop = philo->params->stop;
 	while (!should_stop)
 	{
 		print_status(philo, "is thinking");
-		first_fork = (philo->id % 2 == 0) ? philo->left_fork : philo->right_fork;
-		second_fork = (philo->id % 2 == 0) ? philo->right_fork : philo->left_fork;
-		pthread_mutex_lock(first_fork);
-		print_status(philo, "has taken a fork");
-		if (first_fork == second_fork)
-		{
-			ft_usleep(philo->params->time_to_die);
-			print_status(philo, "died");
-			pthread_mutex_lock(&philo->params->stop_mutex);
-			should_stop = philo->params->stop = 1;
-			pthread_mutex_unlock(&philo->params->stop_mutex);
-			pthread_mutex_unlock(first_fork);
+		take_forks(philo);
+		if (philo->left_fork == philo->right_fork)
 			break ;
-		}
-		pthread_mutex_lock(second_fork);
-		print_status(philo, "has taken a second fork");
-		pthread_mutex_lock(&philo->params->death_mutex);
-		philo->last_meal_time = get_timestamp();
-		print_status(philo, "is eating");
-		pthread_mutex_unlock(&philo->params->death_mutex);
-		ft_usleep(philo->params->time_to_eat);
-		pthread_mutex_lock(&philo->params->meals_mutex);
-		philo->meals_eaten++;
-		pthread_mutex_unlock(&philo->params->meals_mutex);
-		pthread_mutex_unlock(second_fork);
-		pthread_mutex_unlock(first_fork);
+		eat(philo);
 		print_status(philo, "is sleeping");
 		ft_usleep(philo->params->time_to_sleep);
 		pthread_mutex_lock(&philo->params->stop_mutex);
@@ -276,10 +334,11 @@ void	*philosopher_routine(void *arg)
 
 int	ft_atoi_absolute(char *s)
 {
-	int res;
+	int	res;
 
 	res = 0;
-	while (*s == ' ' || *s == '\n' || *s == '\t' || *s == '\r' || *s == '+' || *s == '-')
+	while (*s == ' ' || *s == '\n' || *s == '\t' || *s == '\r' || *s == '+'
+		|| *s == '-')
 		s++;
 	while ('0' <= *s && *s <= '9')
 		res = res * 10 + (*s++ - '0');
@@ -291,19 +350,58 @@ int	parse_arguments(int argc, char **argv, t_params *params)
 	if (argc < 5 || argc > 6)
 	{
 		printf("Usage: %s number_of_philosophers time_to_die time_to_eat "
-			"time_to_sleep [number_of_times_each_philosopher_must_eat]\n", argv[0]);
+				"time_to_sleep [number_of_times_each_philosopher_must_eat]\n",
+				argv[0]);
 		return (0);
 	}
 	params->number_of_philosophers = ft_atoi_absolute(argv[1]);
 	params->time_to_die = ft_atoi_absolute(argv[2]);
 	params->time_to_eat = ft_atoi_absolute(argv[3]);
 	params->time_to_sleep = ft_atoi_absolute(argv[4]);
-	params->number_of_times_each_philosopher_must_eat = (argc == 6) ? ft_atoi_absolute(argv[5]) : -1;
+	if (argc == 6)
+		params->number_of_times_each_philosopher_must_eat = ft_atoi_absolute(argv[5]);
+	else
+		params->number_of_times_each_philosopher_must_eat = -1;
 	params->stop = 0;
 	return (1);
 }
 
-int	initialize_philosophers(t_params *params)
+int	init_mutexes(t_params *params)
+{
+	if (!check_pthread_mutex_init(pthread_mutex_init(&params->print_mutex,
+				NULL))
+		|| !check_pthread_mutex_init(pthread_mutex_init(&params->death_mutex,
+				NULL))
+		|| !check_pthread_mutex_init(pthread_mutex_init(&params->meals_mutex,
+				NULL))
+		|| !check_pthread_mutex_init(pthread_mutex_init(&params->stop_mutex,
+				NULL)))
+		return (0);
+	return (1);
+}
+
+int	init_philosopher_forks(t_params *params, int i)
+{
+	if (params->philosophers[i].id % 2 == 0)
+	{
+		params->philosophers[i].left_fork = &params->forks[i];
+		params->philosophers[i].right_fork = &params->forks[(i + 1)
+			% params->number_of_philosophers];
+	}
+	else
+	{
+		params->philosophers[i].left_fork = &params->forks[(i + 1)
+			% params->number_of_philosophers];
+		params->philosophers[i].right_fork = &params->forks[i];
+	}
+	params->philosophers[i].last_meal_time = get_timestamp();
+	params->philosophers[i].meals_eaten = 0;
+	params->philosophers[i].params = params;
+	return (check_pthread_create(pthread_create(&params->philosophers[i].thread,
+				NULL, philosopher_routine, &params->philosophers[i])));
+}
+
+int	init_forks(t_params *params)
 {
 	int	i;
 
@@ -314,15 +412,18 @@ int	initialize_philosophers(t_params *params)
 	i = 0;
 	while (i < params->number_of_philosophers)
 	{
-		if (!check_pthread_mutex_init(pthread_mutex_init(&params->forks[i], NULL)))
+		if (!check_pthread_mutex_init(pthread_mutex_init(&params->forks[i],
+					NULL)))
 			return (0);
 		i++;
 	}
-	if (!check_pthread_mutex_init(pthread_mutex_init(&params->print_mutex, NULL))
-		|| !check_pthread_mutex_init(pthread_mutex_init(&params->death_mutex, NULL))
-		|| !check_pthread_mutex_init(pthread_mutex_init(&params->meals_mutex, NULL))
-		|| !check_pthread_mutex_init(pthread_mutex_init(&params->stop_mutex, NULL)))
-		return (0);
+	return (1);
+}
+
+int	init_philosophers(t_params *params)
+{
+	int	i;
+
 	params->philosophers = check_malloc(params->number_of_philosophers
 			* sizeof(t_philosopher));
 	if (!params->philosophers)
@@ -332,17 +433,19 @@ int	initialize_philosophers(t_params *params)
 	while (i < params->number_of_philosophers)
 	{
 		params->philosophers[i].id = i + 1;
-		params->philosophers[i].left_fork = &params->forks[i];
-		params->philosophers[i].right_fork = &params->forks[(i + 1)
-			% params->number_of_philosophers];
-		params->philosophers[i].last_meal_time = get_timestamp();
-		params->philosophers[i].meals_eaten = 0;
-		params->philosophers[i].params = params;
-		if (!check_pthread_create(pthread_create(&params->philosophers[i].thread,
-				NULL, philosopher_routine, &params->philosophers[i])))
+		if (!init_philosopher_forks(params, i))
 			return (0);
 		i++;
 	}
+	return (1);
+}
+
+int	initialize_philosophers(t_params *params)
+{
+	if (!init_forks(params) || !init_mutexes(params))
+		return (0);
+	if (!init_philosophers(params))
+		return (0);
 	return (1);
 }
 
@@ -353,65 +456,83 @@ void	cleanup(t_params *params)
 	i = 0;
 	while (i < params->number_of_philosophers)
 	{
+		pthread_join(params->philosophers[i].thread, NULL);
 		pthread_mutex_destroy(&params->forks[i]);
 		i++;
 	}
 	pthread_mutex_destroy(&params->print_mutex);
 	pthread_mutex_destroy(&params->death_mutex);
 	pthread_mutex_destroy(&params->meals_mutex);
+	pthread_mutex_destroy(&params->stop_mutex);
 	free(params->forks);
 	free(params->philosophers);
+}
+
+void	monitor_philosopher(t_params *params, int i)
+{
+	pthread_mutex_lock(&params->death_mutex);
+	if ((get_timestamp()
+			- params->philosophers[i].last_meal_time) > params->time_to_die)
+	{
+		print_status(&params->philosophers[i], "died");
+		pthread_mutex_lock(&params->stop_mutex);
+		params->stop = 1;
+		pthread_mutex_unlock(&params->stop_mutex);
+	}
+	pthread_mutex_unlock(&params->death_mutex);
+}
+
+int	monitor_meals(t_params *params)
+{
+	int	i;
+	int	all_philosophers_done;
+
+	all_philosophers_done = 1;
+	i = 0;
+	while (i < params->number_of_philosophers)
+	{
+		monitor_philosopher(params, i);
+		if (params->number_of_times_each_philosopher_must_eat > 0)
+		{
+			pthread_mutex_lock(&params->meals_mutex);
+			if (params->philosophers[i].meals_eaten < params->number_of_times_each_philosopher_must_eat)
+				all_philosophers_done = 0;
+			pthread_mutex_unlock(&params->meals_mutex);
+		}
+		else
+		{
+			all_philosophers_done = 0;
+		}
+		if (params->stop)
+			break ;
+		i++;
+	}
+	return (all_philosophers_done);
+}
+
+void	check_meals(t_params *params)
+{
+	pthread_mutex_lock(&params->print_mutex);
+	printf("All philosophers have eaten at least %d times.\n",
+		params->number_of_times_each_philosopher_must_eat);
+	pthread_mutex_lock(&params->stop_mutex);
+	params->stop = 1;
+	pthread_mutex_unlock(&params->stop_mutex);
+	pthread_mutex_unlock(&params->print_mutex);
 }
 
 void	*monitor_routine(void *arg)
 {
 	t_params	*params;
-	int			i;
-	int			all_philosophers_done;
 	int			should_stop;
 
 	params = (t_params *)arg;
 	should_stop = params->stop;
 	while (!should_stop)
 	{
-		all_philosophers_done = 1;
-		i = 0;
-		while (i < params->number_of_philosophers)
+		if (monitor_meals(params))
 		{
-			pthread_mutex_lock(&params->death_mutex);
-			if ((get_timestamp() - params->philosophers[i].last_meal_time)
-				> params->time_to_die)
-			{
-				print_status(&params->philosophers[i], "died");
-				pthread_mutex_lock(&params->stop_mutex);
-				params->stop = 1;
-				pthread_mutex_unlock(&params->stop_mutex);
-			}
-			pthread_mutex_unlock(&params->death_mutex);
-			if (params->number_of_times_each_philosopher_must_eat > 0)
-			{
-				pthread_mutex_lock(&params->meals_mutex);
-				if (params->philosophers[i].meals_eaten
-					< params->number_of_times_each_philosopher_must_eat)
-					all_philosophers_done = 0;
-				pthread_mutex_unlock(&params->meals_mutex);
-			}
-			else
-				all_philosophers_done = 0;
-			if (params->stop)
-				break ;
-			i++;
-		}
-		if (params->number_of_times_each_philosopher_must_eat > 0
-			&& all_philosophers_done)
-		{
-			pthread_mutex_lock(&params->print_mutex);
-			printf("All philosophers have eaten at least %d times.\n",
-				params->number_of_times_each_philosopher_must_eat);
-			pthread_mutex_lock(&params->stop_mutex);
-			params->stop = 1;
-			pthread_mutex_unlock(&params->stop_mutex);
-			pthread_mutex_unlock(&params->print_mutex);
+			check_meals(params);
 		}
 		pthread_mutex_lock(&params->stop_mutex);
 		should_stop = params->stop;
@@ -425,7 +546,6 @@ int	main(int argc, char **argv)
 {
 	t_params	params;
 	pthread_t	monitor_thread;
-	int			i;
 
 	if (!parse_arguments(argc, argv, &params))
 		return (1);
@@ -435,18 +555,12 @@ int	main(int argc, char **argv)
 		return (1);
 	}
 	if (!check_pthread_create(pthread_create(&monitor_thread, NULL,
-			monitor_routine, &params)))
+				monitor_routine, &params)))
 	{
 		cleanup(&params);
 		return (1);
 	}
 	pthread_join(monitor_thread, NULL);
-	i = 0;
-	while (i < params.number_of_philosophers)
-	{
-		pthread_join(params.philosophers[i].thread, NULL);
-		i++;
-	}
 	cleanup(&params);
 	return (0);
 }
