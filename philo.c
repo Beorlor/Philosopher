@@ -6,7 +6,7 @@
 /*   By: jedurand <jedurand@student.42perpignan.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/28 12:00:00 by assistant         #+#    #+#             */
-/*   Updated: 2024/06/30 03:30:44 by jedurand         ###   ########.fr       */
+/*   Updated: 2024/06/30 03:35:31 by jedurand         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -350,8 +350,8 @@ int	parse_arguments(int argc, char **argv, t_params *params)
 	if (argc < 5 || argc > 6)
 	{
 		printf("Usage: %s number_of_philosophers time_to_die time_to_eat "
-				"time_to_sleep [number_of_times_each_philosopher_must_eat]\n",
-				argv[0]);
+			"time_to_sleep [number_of_times_each_philosopher_must_eat]\n",
+			argv[0]);
 		return (0);
 	}
 	params->number_of_philosophers = ft_atoi_absolute(argv[1]);
@@ -359,7 +359,8 @@ int	parse_arguments(int argc, char **argv, t_params *params)
 	params->time_to_eat = ft_atoi_absolute(argv[3]);
 	params->time_to_sleep = ft_atoi_absolute(argv[4]);
 	if (argc == 6)
-		params->number_of_times_each_philosopher_must_eat = ft_atoi_absolute(argv[5]);
+		params->number_of_times_each_philosopher_must_eat
+			= ft_atoi_absolute(argv[5]);
 	else
 		params->number_of_times_each_philosopher_must_eat = -1;
 	params->stop = 0;
@@ -495,7 +496,8 @@ int	monitor_meals(t_params *params)
 		if (params->number_of_times_each_philosopher_must_eat > 0)
 		{
 			pthread_mutex_lock(&params->meals_mutex);
-			if (params->philosophers[i].meals_eaten < params->number_of_times_each_philosopher_must_eat)
+			if (params->philosophers[i].meals_eaten
+				< params->number_of_times_each_philosopher_must_eat)
 				all_philosophers_done = 0;
 			pthread_mutex_unlock(&params->meals_mutex);
 		}
