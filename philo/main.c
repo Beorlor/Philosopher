@@ -6,7 +6,7 @@
 /*   By: jedurand <jedurand@student.42perpignan.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 11:10:35 by jedurand          #+#    #+#             */
-/*   Updated: 2024/07/01 14:03:32 by jedurand         ###   ########.fr       */
+/*   Updated: 2024/07/01 16:32:01 by jedurand         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,11 @@ void	cleanup(t_params *params)
 	while (i < params->number_of_philosophers)
 	{
 		pthread_join(params->philosophers[i].thread, NULL);
+		i++;
+	}
+	i = 0;
+	while (i < params->number_of_philosophers)
+	{
 		pthread_mutex_destroy(&params->forks[i]);
 		i++;
 	}
