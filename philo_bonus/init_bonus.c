@@ -6,7 +6,7 @@
 /*   By: jedurand <jedurand@student.42perpignan.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 12:12:55 by jedurand          #+#    #+#             */
-/*   Updated: 2024/07/01 12:17:18 by jedurand         ###   ########.fr       */
+/*   Updated: 2024/07/01 15:25:23 by jedurand         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,60 +19,59 @@ int	initialize_semaphores(t_params *params)
 	sem_unlink("/death_sem");
 	sem_unlink("/pair_of_forks_sem");
 	sem_unlink("/stop_sem");
-	params->forks = sem_open("/forks", O_CREAT, 0644,
-			params->number_of_philosophers);
-	if (params->forks == SEM_FAILED)
+	if (!open_semaphore(&params->forks, "/forks",
+			params->number_of_philosophers)
+		|| !open_semaphore(&params->print_sem, "/print_sem", 1)
+		|| !open_semaphore(&params->death_sem, "/death_sem", 1)
+		|| !open_semaphore(&params->pair_of_forks_sem, "/pair_of_forks_sem",
+			params->number_of_philosophers - 1)
+		|| !open_semaphore(&params->stop_sem, "/stop_sem", 1))
+	{
 		return (0);
-	params->print_sem = sem_open("/print_sem", O_CREAT, 0644, 1);
-	if (params->print_sem == SEM_FAILED)
-		return (0);
-	params->death_sem = sem_open("/death_sem", O_CREAT, 0644, 1);
-	if (params->death_sem == SEM_FAILED)
-		return (0);
-	params->pair_of_forks_sem = sem_open("/pair_of_forks_sem", O_CREAT, 0644,
-			params->number_of_philosophers - 1);
-	if (params->pair_of_forks_sem == SEM_FAILED)
-		return (0);
-	params->stop_sem = sem_open("/stop_sem", O_CREAT, 0644, 1);
-	if (params->stop_sem == SEM_FAILED)
+	}
+	return (1);
+}
+
+int	open_semaphore(sem_t **sem, const char *name, int value)
+{
+	*sem = sem_open(name, O_CREAT, 0644, value);
+	if (*sem == SEM_FAILED)
 		return (0);
 	return (1);
 }
 
-int	create_philosophers_recursive(t_params *params, int i)
+void	cleanup_semaphores(t_params *params)
 {
-	pid_t	pid;
-
-	if (i >= params->number_of_philosophers)
-		return (1);
-	params->philosophers[i].id = i + 1;
-	params->philosophers[i].last_meal_time = get_timestamp();
-	params->philosophers[i].meals_eaten = 0;
-	params->philosophers[i].params = params;
-	pid = fork();
-	if (pid == 0)
-	{
-		philosopher_routine(&params->philosophers[i]);
-		exit(0);
-	}
-	else if (pid < 0)
-	{
-		perror("Failed to fork philosopher process");
-		return (0);
-	}
-	else
-		params->philosophers[i].pid = pid;
-	return (create_philosophers_recursive(params, i + 1));
+	sem_close(params->forks);
+	sem_close(params->print_sem);
+	sem_close(params->death_sem);
+	sem_close(params->pair_of_forks_sem);
+	sem_close(params->stop_sem);
+	sem_unlink("/forks");
+	sem_unlink("/print_sem");
+	sem_unlink("/death_sem");
+	sem_unlink("/pair_of_forks_sem");
+	sem_unlink("/stop_sem");
 }
 
 int	create_philosophers(t_params *params)
 {
-	params->philosophers = malloc(params->number_of_philosophers
-			* sizeof(t_philosopher));
-	if (params->philosophers == NULL)
+	int	i;
+
+	params->philosophers = mmap(NULL, params->number_of_philosophers
+			* sizeof(t_philosopher), PROT_READ | PROT_WRITE,
+			MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+	if (params->philosophers == MAP_FAILED)
 		return (0);
 	init_colors(params->philosophers, params->number_of_philosophers);
-	return (create_philosophers_recursive(params, 0));
+	i = 0;
+	while (i < params->number_of_philosophers)
+	{
+		if (!init_philosopher(params, i))
+			return (0);
+		i++;
+	}
+	return (1);
 }
 
 int	parse_arguments(int argc, char **argv, t_params *params)

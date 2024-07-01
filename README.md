@@ -4,23 +4,9 @@ fermer semaphore dans les fork
 
 ft usleep
 
-volatile
-
-initialize semaphore, refactor
-
-gestion derreur appel fonction
-
-couleur
-
-fonction pas autoriser
-
-norme
+fonction pas autoriser nmap
 
 
-
-
-
-refaire free et le cleanup - leaks
 
 
 info :

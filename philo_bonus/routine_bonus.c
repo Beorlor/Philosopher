@@ -6,7 +6,7 @@
 /*   By: jedurand <jedurand@student.42perpignan.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 12:02:49 by jedurand          #+#    #+#             */
-/*   Updated: 2024/07/01 12:03:20 by jedurand         ###   ########.fr       */
+/*   Updated: 2024/07/01 15:21:28 by jedurand         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,6 @@ void	take_forks(t_philosopher *philo)
 		sem_wait(philo->params->forks);
 		print_status(philo, "has taken a fork");
 		ft_usleep(philo->params->time_to_die);
-		print_status(philo, "died");
 		sem_wait(philo->params->stop_sem);
 		philo->params->stop = 1;
 		sem_post(philo->params->stop_sem);
@@ -71,4 +70,27 @@ void	philosopher_routine(t_philosopher *philo)
 	sem_close(philo->params->pair_of_forks_sem);
 	sem_close(philo->params->stop_sem);
 	exit(0);
+}
+
+int	init_philosopher(t_params *params, int i)
+{
+	pid_t	pid;
+
+	params->philosophers[i].id = i + 1;
+	params->philosophers[i].last_meal_time = get_timestamp();
+	params->philosophers[i].meals_eaten = 0;
+	params->philosophers[i].params = params;
+	pid = fork();
+	if (pid == 0)
+	{
+		philosopher_routine(&params->philosophers[i]);
+		exit(0);
+	}
+	else if (pid < 0)
+	{
+		perror("Failed to fork philosopher process");
+		return (0);
+	}
+	params->philosophers[i].pid = pid;
+	return (1);
 }

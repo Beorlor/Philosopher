@@ -6,7 +6,7 @@
 /*   By: jedurand <jedurand@student.42perpignan.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 12:00:16 by jedurand          #+#    #+#             */
-/*   Updated: 2024/07/01 12:00:46 by jedurand         ###   ########.fr       */
+/*   Updated: 2024/07/01 15:10:12 by jedurand         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,8 +46,10 @@ void	print_status(t_philosopher *philo, const char *status)
 	sem_wait(philo->params->print_sem);
 	sem_wait(philo->params->stop_sem);
 	if (!philo->params->stop)
+	{
 		printf("%s%ld %d %s%s\n", philo->color, timestamp, philo->id, status,
 			COLOR_RESET);
+	}
 	sem_post(philo->params->stop_sem);
 	sem_post(philo->params->print_sem);
 }

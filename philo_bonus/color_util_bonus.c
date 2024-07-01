@@ -6,7 +6,7 @@
 /*   By: jedurand <jedurand@student.42perpignan.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 12:02:07 by jedurand          #+#    #+#             */
-/*   Updated: 2024/07/01 12:02:35 by jedurand         ###   ########.fr       */
+/*   Updated: 2024/07/01 15:11:20 by jedurand         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,8 +55,8 @@ void	init_colors(t_philosopher *philosophers, int number_of_philosophers)
 	int	brightness;
 	int	i;
 
-	init_base_colors(base_colors);
 	i = 0;
+	init_base_colors(base_colors);
 	while (i < number_of_philosophers)
 	{
 		set_brightness(&brightness, i, number_of_philosophers);

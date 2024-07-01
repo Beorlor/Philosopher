@@ -6,7 +6,7 @@
 /*   By: jedurand <jedurand@student.42perpignan.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 11:59:04 by jedurand          #+#    #+#             */
-/*   Updated: 2024/07/01 11:59:40 by jedurand         ###   ########.fr       */
+/*   Updated: 2024/07/01 15:17:46 by jedurand         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,10 +23,15 @@ long	get_timestamp(void)
 void	ft_usleep(int milliseconds)
 {
 	long	start;
+	long	current_time;
 
 	start = get_timestamp();
-	while ((get_timestamp() - start) < milliseconds)
-		usleep(100);
+	current_time = start;
+	while ((current_time - start) < milliseconds)
+	{
+		usleep(10);
+		current_time = get_timestamp();
+	}
 }
 
 void	itoa_rgb(int value, char *str)
@@ -37,7 +42,9 @@ void	itoa_rgb(int value, char *str)
 		value %= 100;
 	}
 	if (value >= 10)
+	{
 		*str++ = '0' + (value / 10);
+	}
 	*str++ = '0' + (value % 10);
 	*str = '\0';
 }

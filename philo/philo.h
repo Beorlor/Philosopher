@@ -6,18 +6,18 @@
 /*   By: jedurand <jedurand@student.42perpignan.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 11:33:09 by jedurand          #+#    #+#             */
-/*   Updated: 2024/07/01 11:52:48 by jedurand         ###   ########.fr       */
+/*   Updated: 2024/07/01 15:26:31 by jedurand         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef PHILO_H
 # define PHILO_H
 
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/time.h>
-#include <unistd.h>
+# include <pthread.h>
+# include <stdio.h>
+# include <stdlib.h>
+# include <sys/time.h>
+# include <unistd.h>
 
 # define COLOR_RESET "\x1b[0m"
 # define MIN_BRIGHTNESS 120
@@ -72,9 +72,11 @@ void				ft_usleep(int milliseconds);
 /* print.c */
 void				print_status(t_philosopher *philo, const char *status);
 void				itoa_rgb(int value, char *str);
-void				adjust_brightness(int *red, int *green, int *blue, int brightness);
+void				adjust_brightness(int *red, int *green, int *blue,
+						int brightness);
 void				construct_ansi_prefix(char **color);
-void				construct_color_sequence(int red, int green, int blue, char *color);
+void				construct_color_sequence(int red, int green, int blue,
+						char *color);
 
 /* color_init.c */
 void				init_red_color(int *color);
@@ -86,9 +88,12 @@ void				init_magenta_color(int *color);
 /* color_util.c */
 void				init_cyan_color(int *color);
 void				init_base_colors(int base_colors[BASE_COLORS_COUNT][3]);
-void				set_brightness(int *brightness, int i, int number_of_philosophers);
-void				set_philosopher_color(t_philosopher *philosopher, int base_colors[3], int brightness);
-void				init_colors(t_philosopher *philosophers, int number_of_philosophers);
+void				set_brightness(int *brightness, int i,
+						int number_of_philosophers);
+void				set_philosopher_color(t_philosopher *philosopher,
+						int base_colors[3], int brightness);
+void				init_colors(t_philosopher *philosophers,
+						int number_of_philosophers);
 
 /* routine.c */
 void				take_forks(t_philosopher *philo);
