@@ -11,10 +11,15 @@ long	get_timestamp(void)
 void	ft_usleep(int milliseconds)
 {
 	long	start;
+	long	current_time;
 
 	start = get_timestamp();
-	while ((get_timestamp() - start) < milliseconds)
+	current_time = start;
+	while ((current_time - start) < milliseconds)
+	{
 		usleep(10);
+		current_time = get_timestamp();
+	}
 }
 
 void	print_status(t_philosopher *philo, const char *status)
@@ -25,7 +30,10 @@ void	print_status(t_philosopher *philo, const char *status)
 	sem_wait(philo->params->print_sem);
 	sem_wait(philo->params->stop_sem);
 	if (!philo->params->stop)
-		printf("%s%ld %d %s%s\n", philo->color, timestamp, philo->id, status, COLOR_RESET);
+	{
+		printf("%s%ld %d %s%s\n", philo->color, timestamp, philo->id, status,
+			COLOR_RESET);
+	}
 	sem_post(philo->params->stop_sem);
 	sem_post(philo->params->print_sem);
 }
@@ -41,7 +49,7 @@ void	take_forks(t_philosopher *philo)
 		philo->params->stop = 1;
 		sem_post(philo->params->stop_sem);
 		sem_post(philo->params->forks);
-		return;
+		return ;
 	}
 	sem_wait(philo->params->pair_of_forks_sem);
 	sem_wait(philo->params->forks);
@@ -65,20 +73,22 @@ void	eat(t_philosopher *philo)
 
 void	philosopher_routine(t_philosopher *philo)
 {
-	while (1)
+	int	should_stop;
+
+	should_stop = 0;
+	while (!should_stop)
 	{
 		sem_wait(philo->params->stop_sem);
 		if (philo->params->stop)
 		{
 			sem_post(philo->params->stop_sem);
-			break;
+			break ;
 		}
 		sem_post(philo->params->stop_sem);
-
 		print_status(philo, "is thinking");
 		take_forks(philo);
 		if (philo->params->number_of_philosophers == 1)
-			break;
+			break ;
 		eat(philo);
 		print_status(philo, "is sleeping");
 		ft_usleep(philo->params->time_to_sleep);
@@ -93,12 +103,18 @@ void	philosopher_routine(t_philosopher *philo)
 
 int	initialize_semaphores(t_params *params)
 {
+	params->forks = SEM_FAILED;
+	params->print_sem = SEM_FAILED;
+	params->death_sem = SEM_FAILED;
+	params->pair_of_forks_sem = SEM_FAILED;
+	params->stop_sem = SEM_FAILED;
 	sem_unlink("/forks");
 	sem_unlink("/print_sem");
 	sem_unlink("/death_sem");
 	sem_unlink("/pair_of_forks_sem");
 	sem_unlink("/stop_sem");
-	params->forks = sem_open("/forks", O_CREAT, 0644, params->number_of_philosophers);
+	params->forks = sem_open("/forks", O_CREAT, 0644,
+			params->number_of_philosophers);
 	if (params->forks == SEM_FAILED)
 		return (0);
 	params->print_sem = sem_open("/print_sem", O_CREAT, 0644, 1);
@@ -107,7 +123,8 @@ int	initialize_semaphores(t_params *params)
 	params->death_sem = sem_open("/death_sem", O_CREAT, 0644, 1);
 	if (params->death_sem == SEM_FAILED)
 		return (0);
-	params->pair_of_forks_sem = sem_open("/pair_of_forks_sem", O_CREAT, 0644, params->number_of_philosophers - 1);
+	params->pair_of_forks_sem = sem_open("/pair_of_forks_sem", O_CREAT, 0644,
+			params->number_of_philosophers - 1);
 	if (params->pair_of_forks_sem == SEM_FAILED)
 		return (0);
 	params->stop_sem = sem_open("/stop_sem", O_CREAT, 0644, 1);
@@ -132,13 +149,17 @@ void	cleanup_semaphores(t_params *params)
 
 void	itoa_rgb(int value, char *str)
 {
+	int	temp;
+
 	if (value >= 100)
 	{
 		*str++ = '0' + (value / 100);
 		value %= 100;
 	}
 	if (value >= 10)
+	{
 		*str++ = '0' + (value / 10);
+	}
 	*str++ = '0' + (value % 10);
 	*str = '\0';
 }
@@ -250,10 +271,12 @@ void	init_base_colors(int base_colors[BASE_COLORS_COUNT][3])
 
 void	set_brightness(int *brightness, int i, int number_of_philosophers)
 {
-	*brightness = MAX_BRIGHTNESS - ((i * (MAX_BRIGHTNESS - MIN_BRIGHTNESS)) / number_of_philosophers);
+	*brightness = MAX_BRIGHTNESS - ((i * (MAX_BRIGHTNESS - MIN_BRIGHTNESS))
+			/ number_of_philosophers);
 }
 
-void	set_philosopher_color(t_philosopher *philosopher, int base_colors[3], int brightness)
+void	set_philosopher_color(t_philosopher *philosopher, int base_colors[3],
+		int brightness)
 {
 	int	red;
 	int	green;
@@ -272,29 +295,36 @@ void	init_colors(t_philosopher *philosophers, int number_of_philosophers)
 	int	brightness;
 	int	i;
 
-	init_base_colors(base_colors);
 	i = 0;
+	init_base_colors(base_colors);
 	while (i < number_of_philosophers)
 	{
 		set_brightness(&brightness, i, number_of_philosophers);
-		set_philosopher_color(&philosophers[i], base_colors[(i * 5) % BASE_COLORS_COUNT], brightness);
+		set_philosopher_color(&philosophers[i], base_colors[(i * 5)
+			% BASE_COLORS_COUNT], brightness);
 		i++;
 	}
 }
 
 int	create_philosophers(t_params *params)
 {
-	params->philosophers = mmap(NULL, params->number_of_philosophers * sizeof(t_philosopher), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+	int		i;
+	pid_t	pid;
+
+	params->philosophers = mmap(NULL, params->number_of_philosophers
+			* sizeof(t_philosopher), PROT_READ | PROT_WRITE,
+			MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 	if (params->philosophers == MAP_FAILED)
 		return (0);
 	init_colors(params->philosophers, params->number_of_philosophers);
-	for (int i = 0; i < params->number_of_philosophers; i++)
+	i = 0;
+	while (i < params->number_of_philosophers)
 	{
 		params->philosophers[i].id = i + 1;
 		params->philosophers[i].last_meal_time = get_timestamp();
 		params->philosophers[i].meals_eaten = 0;
 		params->philosophers[i].params = params;
-		pid_t pid = fork();
+		pid = fork();
 		if (pid == 0)
 		{
 			philosopher_routine(&params->philosophers[i]);
@@ -307,6 +337,7 @@ int	create_philosophers(t_params *params)
 		}
 		else
 			params->philosophers[i].pid = pid;
+		i++;
 	}
 	return (1);
 }
@@ -315,43 +346,59 @@ int	parse_arguments(int argc, char **argv, t_params *params)
 {
 	if (argc < 5 || argc > 6)
 	{
-		printf("Usage: %s number_of_philosophers time_to_die time_to_eat time_to_sleep [number_of_times_each_philosopher_must_eat]\n", argv[0]);
+		printf("Usage: %s number_of_philosophers time_to_die time_to_eat "
+			"time_to_sleep [number_of_times_each_philosopher_must_eat]\n",
+			argv[0]);
 		return (0);
 	}
 	params->number_of_philosophers = atoi(argv[1]);
 	params->time_to_die = atoi(argv[2]);
 	params->time_to_eat = atoi(argv[3]);
 	params->time_to_sleep = atoi(argv[4]);
-	params->number_of_times_each_philosopher_must_eat = (argc == 6) ? atoi(argv[5]) : -1;
+	if (argc == 6)
+		params->number_of_times_each_philosopher_must_eat = atoi(argv[5]);
+	else
+		params->number_of_times_each_philosopher_must_eat = -1;
 	params->stop = 0;
 	return (1);
 }
 
 void	monitor_philosopher(t_params *params, int i)
 {
+	long	time_diff;
+
 	sem_wait(params->death_sem);
-	if ((get_timestamp() - params->philosophers[i].last_meal_time) > params->time_to_die)
+	time_diff = get_timestamp() - params->philosophers[i].last_meal_time;
+	if (time_diff > params->time_to_die)
 	{
 		print_status(&params->philosophers[i], "died");
 		sem_wait(params->stop_sem);
 		params->stop = 1;
 		sem_post(params->stop_sem);
-		for (int j = 0; j < params->number_of_philosophers; j++)
-			kill(params->philosophers[j].pid, SIGTERM);
+		i = 0;
+		while (i < params->number_of_philosophers)
+		{
+			kill(params->philosophers[i].pid, SIGTERM);
+			i++;
+		}
 	}
 	sem_post(params->death_sem);
 }
 
 int	monitor_meals(t_params *params)
 {
-	int	all_philosophers_done = 1;
+	int	i;
+	int	all_philosophers_done;
 
-	for (int i = 0; i < params->number_of_philosophers; i++)
+	i = 0;
+	all_philosophers_done = 1;
+	while (i < params->number_of_philosophers)
 	{
 		monitor_philosopher(params, i);
 		if (params->number_of_times_each_philosopher_must_eat > 0)
 		{
-			if (params->philosophers[i].meals_eaten < params->number_of_times_each_philosopher_must_eat)
+			if (params->philosophers[i].meals_eaten
+				< params->number_of_times_each_philosopher_must_eat)
 				all_philosophers_done = 0;
 		}
 		else
@@ -362,37 +409,47 @@ int	monitor_meals(t_params *params)
 		if (params->stop)
 		{
 			sem_post(params->stop_sem);
-			break;
+			break ;
 		}
 		sem_post(params->stop_sem);
+		i++;
 	}
 	return (all_philosophers_done);
 }
 
 void	check_meals(t_params *params)
 {
+	int	i;
+
 	sem_wait(params->print_sem);
-	printf("All philosophers have eaten at least %d times.\n", params->number_of_times_each_philosopher_must_eat);
+	printf("All philosophers have eaten at least %d times.\n",
+		params->number_of_times_each_philosopher_must_eat);
 	sem_wait(params->stop_sem);
 	params->stop = 1;
 	sem_post(params->stop_sem);
-	for (int i = 0; i < params->number_of_philosophers; i++)
+	i = 0;
+	while (i < params->number_of_philosophers)
+	{
 		kill(params->philosophers[i].pid, SIGTERM);
+		i++;
+	}
 	sem_post(params->print_sem);
 }
 
 void	monitor_routine(t_params *params)
 {
-	while (1)
+	int	should_stop;
+
+	should_stop = 0;
+	while (!should_stop)
 	{
 		sem_wait(params->stop_sem);
 		if (params->stop)
 		{
 			sem_post(params->stop_sem);
-			break;
+			break ;
 		}
 		sem_post(params->stop_sem);
-
 		if (monitor_meals(params))
 			check_meals(params);
 		usleep(100);
@@ -401,10 +458,17 @@ void	monitor_routine(t_params *params)
 
 void	cleanup(t_params *params)
 {
-	for (int i = 0; i < params->number_of_philosophers; i++)
+	int	i;
+
+	i = 0;
+	while (i < params->number_of_philosophers)
+	{
 		waitpid(params->philosophers[i].pid, NULL, 0);
+		i++;
+	}
 	cleanup_semaphores(params);
-	munmap(params->philosophers, params->number_of_philosophers * sizeof(t_philosopher));
+	munmap(params->philosophers, params->number_of_philosophers
+		* sizeof(t_philosopher));
 }
 
 int	main(int argc, char **argv)

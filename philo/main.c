@@ -6,7 +6,7 @@
 /*   By: jedurand <jedurand@student.42perpignan.    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/01 11:10:35 by jedurand          #+#    #+#             */
-/*   Updated: 2024/07/01 11:32:07 by jedurand         ###   ########.fr       */
+/*   Updated: 2024/07/01 14:03:32 by jedurand         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,19 +37,19 @@ int	main(int argc, char **argv)
 	pthread_t	monitor_thread;
 
 	if (!parse_arguments(argc, argv, &params))
-		return (1);
+		return (EXIT_FAILURE);
 	if (!initialize_philosophers(&params))
 	{
 		cleanup(&params);
-		return (1);
+		return (EXIT_FAILURE);
 	}
 	if (!check_pthread_create(pthread_create(&monitor_thread, NULL,
 				monitor_routine, &params)))
 	{
 		cleanup(&params);
-		return (1);
+		return (EXIT_FAILURE);
 	}
 	pthread_join(monitor_thread, NULL);
 	cleanup(&params);
-	return (0);
+	return (EXIT_SUCCESS);
 }
