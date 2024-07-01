@@ -76,7 +76,8 @@ void	print_status(t_philosopher *philo, const char *status)
 	sem_wait(philo->params->print_sem);
 	sem_wait(philo->params->stop_sem);
 	if (!philo->params->stop)
-		printf("%ld %d %s\n", timestamp, philo->id, status);
+		printf("%s%ld %d %s%s\n", philo->color, timestamp, philo->id, status,
+			COLOR_RESET);
 	sem_post(philo->params->stop_sem);
 	sem_post(philo->params->print_sem);
 }
@@ -338,46 +339,49 @@ void	init_colors(t_philosopher *philosophers, int number_of_philosophers)
 	}
 }
 
-int	create_philosophers(t_params *params)
+int	create_philosophers_recursive(t_params *params, int i)
 {
-	int		i;
 	pid_t	pid;
 
+	if (i >= params->number_of_philosophers)
+		return (1);
+	params->philosophers[i].id = i + 1;
+	params->philosophers[i].last_meal_time = get_timestamp();
+	params->philosophers[i].meals_eaten = 0;
+	params->philosophers[i].params = params;
+	pid = fork();
+	if (pid == 0)
+	{
+		philosopher_routine(&params->philosophers[i]);
+		exit(0);
+	}
+	else if (pid < 0)
+	{
+		perror("Failed to fork philosopher process");
+		return (0);
+	}
+	else
+		params->philosophers[i].pid = pid;
+	return (create_philosophers_recursive(params, i + 1));
+}
+
+int	create_philosophers(t_params *params)
+{
 	params->philosophers = malloc(params->number_of_philosophers
 			* sizeof(t_philosopher));
 	if (params->philosophers == NULL)
 		return (0);
 	init_colors(params->philosophers, params->number_of_philosophers);
-	i = 0;
-	while (i < params->number_of_philosophers)
-	{
-		params->philosophers[i].id = i + 1;
-		params->philosophers[i].last_meal_time = get_timestamp();
-		params->philosophers[i].meals_eaten = 0;
-		params->philosophers[i].params = params;
-		pid = fork();
-		if (pid == 0)
-		{
-			philosopher_routine(&params->philosophers[i]);
-			exit(0);
-		}
-		else if (pid < 0)
-		{
-			perror("Failed to fork philosopher process");
-			return (0);
-		}
-		else
-			params->philosophers[i].pid = pid;
-		i++;
-	}
-	return (1);
+	return (create_philosophers_recursive(params, 0));
 }
 
 int	parse_arguments(int argc, char **argv, t_params *params)
 {
 	if (argc < 5 || argc > 6)
 	{
-		printf("Usage: %s number_of_philosophers time_to_die time_to_eat time_to_sleep [number_of_times_each_philosopher_must_eat]\n", argv[0]);
+		printf("Usage: %s number_of_philosophers time_to_die time_to_eat "
+			"time_to_sleep [number_of_times_each_philosopher_must_eat]\n",
+			argv[0]);
 		return (0);
 	}
 	params->number_of_philosophers = atoi(argv[1]);
@@ -392,6 +396,15 @@ int	parse_arguments(int argc, char **argv, t_params *params)
 	return (1);
 }
 
+void	kill_all_philosophers(t_params *params, int j)
+{
+	if (j < params->number_of_philosophers)
+	{
+		kill(params->philosophers[j].pid, SIGTERM);
+		kill_all_philosophers(params, j + 1);
+	}
+}
+
 void	monitor_philosopher(t_params *params, int i)
 {
 	sem_wait(params->death_sem);
@@ -402,41 +415,39 @@ void	monitor_philosopher(t_params *params, int i)
 		sem_wait(params->stop_sem);
 		params->stop = 1;
 		sem_post(params->stop_sem);
-		for (int j = 0; j < params->number_of_philosophers; j++)
-			kill(params->philosophers[j].pid, SIGTERM);
+		kill_all_philosophers(params, 0);
 	}
 	sem_post(params->death_sem);
 }
 
+int	monitor_meals_recursive(t_params *params, int i, int all_philosophers_done)
+{
+	if (i >= params->number_of_philosophers)
+		return (all_philosophers_done);
+	monitor_philosopher(params, i);
+	if (params->number_of_times_each_philosopher_must_eat > 0)
+	{
+		if (params->philosophers[i].meals_eaten
+			< params->number_of_times_each_philosopher_must_eat)
+			all_philosophers_done = 0;
+	}
+	else
+	{
+		all_philosophers_done = 0;
+	}
+	sem_wait(params->stop_sem);
+	if (params->stop)
+	{
+		sem_post(params->stop_sem);
+		return (all_philosophers_done);
+	}
+	sem_post(params->stop_sem);
+	return (monitor_meals_recursive(params, i + 1, all_philosophers_done));
+}
+
 int	monitor_meals(t_params *params)
 {
-	int	i;
-	int	all_philosophers_done;
-
-	all_philosophers_done = 1;
-	i = 0;
-	while (i < params->number_of_philosophers)
-	{
-		monitor_philosopher(params, i);
-		if (params->number_of_times_each_philosopher_must_eat > 0)
-		{
-			if (params->philosophers[i].meals_eaten < params->number_of_times_each_philosopher_must_eat)
-				all_philosophers_done = 0;
-		}
-		else
-		{
-			all_philosophers_done = 0;
-		}
-		sem_wait(params->stop_sem);
-		if (params->stop)
-		{
-			sem_post(params->stop_sem);
-			break ;
-		}
-		sem_post(params->stop_sem);
-		i++;
-	}
-	return (all_philosophers_done);
+	return (monitor_meals_recursive(params, 0, 1));
 }
 
 void	check_meals(t_params *params)
