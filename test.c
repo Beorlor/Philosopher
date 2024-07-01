@@ -73,10 +73,7 @@ void	eat(t_philosopher *philo)
 
 void	philosopher_routine(t_philosopher *philo)
 {
-	int	should_stop;
-
-	should_stop = 0;
-	while (!should_stop)
+	while (1)
 	{
 		sem_wait(philo->params->stop_sem);
 		if (philo->params->stop)
@@ -101,35 +98,31 @@ void	philosopher_routine(t_philosopher *philo)
 	exit(0);
 }
 
+int	open_semaphore(sem_t **sem, const char *name, int value)
+{
+	*sem = sem_open(name, O_CREAT, 0644, value);
+	if (*sem == SEM_FAILED)
+		return (0);
+	return (1);
+}
+
 int	initialize_semaphores(t_params *params)
 {
-	params->forks = SEM_FAILED;
-	params->print_sem = SEM_FAILED;
-	params->death_sem = SEM_FAILED;
-	params->pair_of_forks_sem = SEM_FAILED;
-	params->stop_sem = SEM_FAILED;
 	sem_unlink("/forks");
 	sem_unlink("/print_sem");
 	sem_unlink("/death_sem");
 	sem_unlink("/pair_of_forks_sem");
 	sem_unlink("/stop_sem");
-	params->forks = sem_open("/forks", O_CREAT, 0644,
-			params->number_of_philosophers);
-	if (params->forks == SEM_FAILED)
+	if (!open_semaphore(&params->forks, "/forks",
+			params->number_of_philosophers)
+		|| !open_semaphore(&params->print_sem, "/print_sem", 1)
+		|| !open_semaphore(&params->death_sem, "/death_sem", 1)
+		|| !open_semaphore(&params->pair_of_forks_sem, "/pair_of_forks_sem",
+			params->number_of_philosophers - 1)
+		|| !open_semaphore(&params->stop_sem, "/stop_sem", 1))
+	{
 		return (0);
-	params->print_sem = sem_open("/print_sem", O_CREAT, 0644, 1);
-	if (params->print_sem == SEM_FAILED)
-		return (0);
-	params->death_sem = sem_open("/death_sem", O_CREAT, 0644, 1);
-	if (params->death_sem == SEM_FAILED)
-		return (0);
-	params->pair_of_forks_sem = sem_open("/pair_of_forks_sem", O_CREAT, 0644,
-			params->number_of_philosophers - 1);
-	if (params->pair_of_forks_sem == SEM_FAILED)
-		return (0);
-	params->stop_sem = sem_open("/stop_sem", O_CREAT, 0644, 1);
-	if (params->stop_sem == SEM_FAILED)
-		return (0);
+	}
 	return (1);
 }
 
@@ -306,10 +299,32 @@ void	init_colors(t_philosopher *philosophers, int number_of_philosophers)
 	}
 }
 
+int	init_philosopher(t_params *params, int i)
+{
+	pid_t	pid;
+
+	params->philosophers[i].id = i + 1;
+	params->philosophers[i].last_meal_time = get_timestamp();
+	params->philosophers[i].meals_eaten = 0;
+	params->philosophers[i].params = params;
+	pid = fork();
+	if (pid == 0)
+	{
+		philosopher_routine(&params->philosophers[i]);
+		exit(0);
+	}
+	else if (pid < 0)
+	{
+		perror("Failed to fork philosopher process");
+		return (0);
+	}
+	params->philosophers[i].pid = pid;
+	return (1);
+}
+
 int	create_philosophers(t_params *params)
 {
-	int		i;
-	pid_t	pid;
+	int	i;
 
 	params->philosophers = mmap(NULL, params->number_of_philosophers
 			* sizeof(t_philosopher), PROT_READ | PROT_WRITE,
@@ -320,23 +335,8 @@ int	create_philosophers(t_params *params)
 	i = 0;
 	while (i < params->number_of_philosophers)
 	{
-		params->philosophers[i].id = i + 1;
-		params->philosophers[i].last_meal_time = get_timestamp();
-		params->philosophers[i].meals_eaten = 0;
-		params->philosophers[i].params = params;
-		pid = fork();
-		if (pid == 0)
-		{
-			philosopher_routine(&params->philosophers[i]);
-			exit(0);
-		}
-		else if (pid < 0)
-		{
-			perror("Failed to fork philosopher process");
+		if (!init_philosopher(params, i))
 			return (0);
-		}
-		else
-			params->philosophers[i].pid = pid;
 		i++;
 	}
 	return (1);
@@ -385,6 +385,12 @@ void	monitor_philosopher(t_params *params, int i)
 	sem_post(params->death_sem);
 }
 
+int	enough_food(t_params *params, int i)
+{
+	return (params->philosophers[i].meals_eaten
+		< params->number_of_times_each_philosopher_must_eat);
+}
+
 int	monitor_meals(t_params *params)
 {
 	int	i;
@@ -397,14 +403,11 @@ int	monitor_meals(t_params *params)
 		monitor_philosopher(params, i);
 		if (params->number_of_times_each_philosopher_must_eat > 0)
 		{
-			if (params->philosophers[i].meals_eaten
-				< params->number_of_times_each_philosopher_must_eat)
+			if (enough_food(params, i))
 				all_philosophers_done = 0;
 		}
 		else
-		{
 			all_philosophers_done = 0;
-		}
 		sem_wait(params->stop_sem);
 		if (params->stop)
 		{
